@@ -531,13 +531,15 @@
   .trial-bar p { margin: 0; min-width: 0; flex: 1 1 280px; }
   @media (max-width: 860px) { .plans, .how { grid-template-columns: minmax(0, 1fr); } .plans { gap: 22px; } }
   /* Ad breaks */
-  .adbreak { position: absolute; inset: 0; z-index: 3; background: #000; transform: translateZ(0); -webkit-transform: translateZ(0); }
-  .adbreak video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
-  .adbreak .ad-tap { left: 50%; top: 50%; transform: translate(-50%, -50%); }
+  /* Keep the ad video in its own normal rendering layer. Transformed parents can cause
+     Chromium/WebKit to play audio while the video surface stays black. */
+  .adbreak { position: absolute; inset: 0; z-index: 10; background: #000; overflow: hidden; isolation: isolate; }
+  .adbreak video { position: absolute; inset: 0; display: block; z-index: 1; width: 100%; height: 100%; max-width: none; object-fit: contain; background: #000; opacity: 1; visibility: visible; transform: none !important; -webkit-transform: none !important; filter: none !important; }
+  .adbreak .ad-tap { left: 50%; top: 50%; z-index: 3; transform: translate(-50%, -50%); }
   .ad-mute { pointer-events: auto; display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 6px; background: rgba(0,0,0,.65); color: #fff; }
   .ad-mute svg { width: 20px; height: 20px; }
   .player.in-ad .stage { visibility: hidden; }
-  .ad-hud { position: absolute; left: var(--gutter); right: var(--gutter); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; pointer-events: none; }
+  .ad-hud { position: absolute; z-index: 2; left: var(--gutter); right: var(--gutter); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; pointer-events: none; }
   .ad-hud > span { display: inline-flex; gap: 8px; align-items: center; background: rgba(0,0,0,.65); padding: 7px 12px; border-radius: 6px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .ad-tag { font-style: normal; background: var(--gold); color: #120c0d; font-weight: 800; font-size: 12px; letter-spacing: .08em; padding: 2px 7px; border-radius: 3px; }
   .ad-up b { color: var(--gold); }
