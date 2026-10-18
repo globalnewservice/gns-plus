@@ -2569,16 +2569,33 @@ function startAd(after, pick) {
 /* Some phones play an ad's sound without drawing its picture. If the ad has been playing for a moment with no
    frames drawn, re-attach the video so its picture shows up. */
 function watchAdFrames() {
-  if (!vAd.requestVideoFrameCallback) return;
-  const src = vAd.src, onFrame = () => { if (vAd.src !== src || !P.inAd) return; vAd._frames++; $("adPosterFallback").hidden = true; vAd.requestVideoFrameCallback(onFrame); };
-  vAd.requestVideoFrameCallback(onFrame);
+  const src = vAd.src;
+  const fallback = $("adPosterFallback");
   let tries = 0;
+  if (vAd.requestVideoFrameCallback) {
+    const onFrame = () => {
+      if (vAd.src !== src || !P.inAd) return;
+      vAd._frames++;
+      fallback.hidden = true;
+      vAd.requestVideoFrameCallback(onFrame);
+    };
+    vAd.requestVideoFrameCallback(onFrame);
+  }
+  /* Fallback even on browsers without requestVideoFrameCallback. If sound/time advance but no video frame is
+     presented, show the supplied poster rather than leaving the ad area completely black. */
   const check = () => {
     if (!P.inAd || vAd.src !== src) return;
-    if (!vAd.paused && vAd.currentTime > 1.2 && !vAd._frames && tries < 3) {
-      tries++; vAd.style.display = "none"; void vAd.offsetWidth; vAd.style.display = "";
+    if (!vAd.paused && vAd.currentTime > 1.2 && !vAd._frames) {
+      if (tries < 3) {
+        tries++;
+        vAd.style.display = "none"; void vAd.offsetWidth; vAd.style.display = "block";
+      }
+      if (fallback.getAttribute("src")) {
+        fallback.hidden = false;
+        fallback.style.display = "block";
+      }
     }
-    if (!vAd._frames) setTimeout(check, 1200);
+    if (!vAd._frames && vAd.currentTime < (vAd.duration || 999)) setTimeout(check, 900);
   };
   setTimeout(check, 1600);
 }
