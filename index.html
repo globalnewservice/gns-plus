@@ -2562,21 +2562,39 @@ function startAd(after, pick) {
   const pr = vAd.play(); if (pr && pr.catch) pr.catch(() => { if (P.inAd) $("adTap").hidden = false; });
   watchAdFrames();
 }
-/* Some phones play an ad's sound without drawing its picture. If the ad has been playing for a moment with no
-   frames drawn, re-attach the video so its picture shows up. */
+/* Detect when the browser stops presenting decoded ad frames even though playback
+   continues, then gently rebuild the video compositor layer without reloading the file. */
 function watchAdFrames() {
   if (!vAd.requestVideoFrameCallback) return;
-  const src = vAd.src, onFrame = () => { if (vAd.src !== src || !P.inAd) return; vAd._frames++; vAd.requestVideoFrameCallback(onFrame); };
+  const src = vAd.src;
+  vAd._lastAdFrameAt = Date.now();
+  vAd._adRenderFixes = 0;
+  const onFrame = () => {
+    if (vAd.src !== src || !P.inAd) return;
+    vAd._lastAdFrameAt = Date.now();
+    vAd.requestVideoFrameCallback(onFrame);
+  };
   vAd.requestVideoFrameCallback(onFrame);
-  let tries = 0;
   const check = () => {
     if (!P.inAd || vAd.src !== src) return;
-    if (!vAd.paused && vAd.currentTime > 1.2 && !vAd._frames && tries < 3) {
-      tries++; vAd.style.display = "none"; void vAd.offsetWidth; vAd.style.display = "";
+    const stalled = !vAd.paused && !vAd.ended && vAd.currentTime > 1 &&
+      Date.now() - vAd._lastAdFrameAt > 2200;
+    if (stalled && vAd._adRenderFixes < 3) {
+      vAd._adRenderFixes++;
+      // Briefly toggle the compositing hint; do not change source, time, or playback state.
+      vAd.style.willChange = "transform";
+      vAd.style.transform = "translateZ(0)";
+      void vAd.offsetHeight;
+      setTimeout(() => {
+        if (vAd.src !== src || !P.inAd) return;
+        vAd.style.transform = "none";
+        vAd.style.willChange = "auto";
+        vAd._lastAdFrameAt = Date.now();
+      }, 120);
     }
-    if (!vAd._frames) setTimeout(check, 1200);
+    setTimeout(check, 800);
   };
-  setTimeout(check, 1600);
+  setTimeout(check, 1800);
 }
 function stopAd() {
   P.inAd = false; adBox.hidden = true; player.classList.remove("in-ad"); $("adTap").hidden = true;
