@@ -535,6 +535,7 @@
   .adbreak { position: absolute; inset: 0; z-index: 3; background: #000; }
   .adbreak video { position: absolute; inset: 0; z-index: 1; display: block; visibility: visible; opacity: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; background: transparent; transform: none; -webkit-transform: none; backface-visibility: visible; -webkit-backface-visibility: visible; }
   .ad-poster-fallback { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .ad-debug { position: absolute; z-index: 8; top: 12px; left: 12px; max-width: calc(100% - 24px); padding: 7px 10px; border-radius: 5px; background: rgba(0,0,0,.82); color: #fff; font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; pointer-events: none; }
   .adbreak .ad-hud { z-index: 4; }
   .adbreak .ad-tap { left: 50%; top: 50%; transform: translate(-50%, -50%); }
   .ad-mute { pointer-events: auto; display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 6px; background: rgba(0,0,0,.65); color: #fff; }
@@ -958,7 +959,7 @@
   <div class="adbreak" id="adBreak" hidden>
     <img id="adPosterFallback" class="ad-poster-fallback" alt="" hidden>
     <video id="vAd" playsinline preload="auto" disablepictureinpicture></video>
-    <div class="ad-hud"><span><i class="ad-tag">AD</i><span id="adCount">Your show will resume shortly</span></span><span class="ad-up">No ads with <b>GNS+ Gold</b> or <b>Premium</b></span><button type="button" class="ad-mute" id="adMute" aria-label="Mute"></button></div>
+    <div class="ad-debug" id="adDebug" aria-live="polite">Ad diagnostics loading…</div><div class="ad-hud"><span><i class="ad-tag">AD</i><span id="adCount">Your show will resume shortly</span></span><span class="ad-up">No ads with <b>GNS+ Gold</b> or <b>Premium</b></span><button type="button" class="ad-mute" id="adMute" aria-label="Mute"></button></div>
     <button type="button" class="ad-tap" id="adTap" hidden>Tap to play</button>
   </div>
   <div class="subs" id="pSubs" hidden></div>
@@ -2549,12 +2550,21 @@ function unlockPlayers() {
 
 /* ---- Ad breaks: unskippable, one ad per break, ads take turns ---- */
 const vAd = $("vAd"), adBox = $("adBreak");
+function updateAdDebug(eventName) {
+  const out = $("adDebug"); if (!out) return;
+  const err = vAd.error ? `ERR${vAd.error.code}` : "no-error";
+  const poster = $("adPosterFallback");
+  const posterState = poster && poster.getAttribute("src") ? (poster.complete && poster.naturalWidth ? `poster${poster.naturalWidth}x${poster.naturalHeight}` : "poster-not-loaded") : "no-poster";
+  out.textContent = `${eventName || "playing"} | ${vAd.videoWidth}x${vAd.videoHeight} | ready:${vAd.readyState} network:${vAd.networkState} | t:${Number(vAd.currentTime || 0).toFixed(1)} | frames:${vAd._frames || 0} | ${err} | ${posterState}`;
+}
+["loadstart","loadedmetadata","loadeddata","canplay","playing","timeupdate","waiting","stalled","error","pause"].forEach(name => vAd.addEventListener(name, () => updateAdDebug(name)));
 let adNext = 0; try { adNext = (+localStorage.getItem("gnsp-ad-next-2") || 0) % ADS.list.length; } catch (e) {}
 P.inAd = false; P.adCb = null; P.adMarks = []; P.adDone = new Set();
 function startAd(after, pick) {
   const ad = pick || ADS.list[adNext % ADS.list.length];
   if (!pick) { adNext = (adNext + 1) % ADS.list.length; try { localStorage.setItem("gnsp-ad-next-2", String(adNext)); } catch (e) {} }
   P.inAd = true; P.adCb = after; player.classList.add("in-ad");
+  updateAdDebug("starting");
   vids.forEach(v => { if (!v.paused) v.pause(); });
   adBox.hidden = false; $("adTap").hidden = true; $("adCount").textContent = "Your show will resume shortly";
   const adPosterFallback = $("adPosterFallback");
@@ -2562,6 +2572,7 @@ function startAd(after, pick) {
   else { vAd.removeAttribute("poster"); adPosterFallback.removeAttribute("src"); adPosterFallback.hidden = true; }
   vAd.muted = P.muted; setMuteUI(); vAd._t = 0; vAd._frames = 0;
   vAd.src = ad.src; vAd.load();
+  updateAdDebug("source-set");
   void adBox.offsetWidth;                                   // lay the ad out before it plays, so phones draw its picture (not just its sound)
   const pr = vAd.play(); if (pr && pr.catch) pr.catch(() => { if (P.inAd) $("adTap").hidden = false; });
   watchAdFrames();
