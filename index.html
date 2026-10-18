@@ -531,8 +531,9 @@
   .trial-bar p { margin: 0; min-width: 0; flex: 1 1 280px; }
   @media (max-width: 860px) { .plans, .how { grid-template-columns: minmax(0, 1fr); } .plans { gap: 22px; } }
   /* Ad breaks */
-  .adbreak { position: absolute; inset: 0; z-index: 3; background: #000; transform: translateZ(0); -webkit-transform: translateZ(0); }
-  .adbreak video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  /* Keep ad video on a plain, untransformed layer. Some browsers can play audio while the transformed video layer stays black. */
+  .adbreak { position: absolute; inset: 0; z-index: 3; background: #000; }
+  .adbreak video { position: absolute; inset: 0; display: block; visibility: visible; opacity: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; background: #000; transform: none; -webkit-transform: none; backface-visibility: visible; -webkit-backface-visibility: visible; }
   .adbreak .ad-tap { left: 50%; top: 50%; transform: translate(-50%, -50%); }
   .ad-mute { pointer-events: auto; display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 6px; background: rgba(0,0,0,.65); color: #fff; }
   .ad-mute svg { width: 20px; height: 20px; }
