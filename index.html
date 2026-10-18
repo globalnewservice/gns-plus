@@ -2,7 +2,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <title>GNS+</title>
 <meta name="description" content="GNS+, the Global News Service streaming service. Sign in to watch.">
-<meta name="gns-plus-build" content="2026-10-14-episodes-3">
+<meta name="gns-plus-build" content="2026-10-18-ad-debug-visible-1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
@@ -535,7 +535,7 @@
   .adbreak { position: absolute; inset: 0; z-index: 3; background: #000; }
   .adbreak video { position: absolute; inset: 0; z-index: 1; display: block; visibility: visible; opacity: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; background: transparent; transform: none; -webkit-transform: none; backface-visibility: visible; -webkit-backface-visibility: visible; }
   .ad-poster-fallback { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
-  .ad-debug { position: absolute; z-index: 8; top: 12px; left: 12px; max-width: calc(100% - 24px); padding: 7px 10px; border-radius: 5px; background: rgba(0,0,0,.82); color: #fff; font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; pointer-events: none; }
+  .ad-debug { position: fixed !important; z-index: 2147483647 !important; top: 8px !important; left: 8px !important; max-width: calc(100vw - 16px); padding: 9px 12px; border: 2px solid #fff; border-radius: 5px; background: #005fcc !important; color: #fff !important; font: bold 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; pointer-events: none; box-shadow: 0 2px 12px #000; }
   .adbreak .ad-hud { z-index: 4; }
   .adbreak .ad-tap { left: 50%; top: 50%; transform: translate(-50%, -50%); }
   .ad-mute { pointer-events: auto; display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 6px; background: rgba(0,0,0,.65); color: #fff; }
