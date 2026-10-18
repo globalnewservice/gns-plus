@@ -2558,7 +2558,7 @@ function startAd(after, pick) {
   vids.forEach(v => { if (!v.paused) v.pause(); });
   adBox.hidden = false; $("adTap").hidden = true; $("adCount").textContent = "Your show will resume shortly";
   const adPosterFallback = $("adPosterFallback");
-  if (ad.poster) { vAd.poster = ad.poster; adPosterFallback.src = ad.poster; adPosterFallback.hidden = false; }
+  if (ad.poster) { vAd.poster = ad.poster; adPosterFallback.src = ad.poster; adPosterFallback.hidden = true; }
   else { vAd.removeAttribute("poster"); adPosterFallback.removeAttribute("src"); adPosterFallback.hidden = true; }
   vAd.muted = P.muted; setMuteUI(); vAd._t = 0; vAd._frames = 0;
   vAd.src = ad.src; vAd.load();
@@ -2580,9 +2580,12 @@ function watchAdFrames() {
       vAd.requestVideoFrameCallback(onFrame);
     };
     vAd.requestVideoFrameCallback(onFrame);
+  } else {
+    /* Browsers without frame callbacks should show the actual video once it has decoded data. */
+    const hideFallback = () => { if (vAd.src === src && P.inAd) fallback.hidden = true; };
+    vAd.addEventListener("loadeddata", hideFallback, { once: true });
   }
-  /* Fallback even on browsers without requestVideoFrameCallback. If sound/time advance but no video frame is
-     presented, show the supplied poster rather than leaving the ad area completely black. */
+  /* Only show the poster after playback has advanced and the browser reports no presented video frames. */
   const check = () => {
     if (!P.inAd || vAd.src !== src) return;
     if (!vAd.paused && vAd.currentTime > 1.2 && !vAd._frames) {
