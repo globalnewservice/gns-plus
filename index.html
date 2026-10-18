@@ -2562,37 +2562,19 @@ function startAd(after, pick) {
   const pr = vAd.play(); if (pr && pr.catch) pr.catch(() => { if (P.inAd) $("adTap").hidden = false; });
   watchAdFrames();
 }
-/* Recover if the browser starts drawing an ad and then its video surface goes black
-   while audio continues. Track the most recent decoded frame, not just whether any frame
-   was ever drawn. */
+/* Some phones play an ad's sound without drawing its picture. If the ad has been playing for a moment with no
+   frames drawn, re-attach the video so its picture shows up. */
 function watchAdFrames() {
   if (!vAd.requestVideoFrameCallback) return;
-  const src = vAd.src;
-  vAd._frames = 0; vAd._lastFrameAt = Date.now(); vAd._renderFixes = 0;
-  const onFrame = () => {
-    if (vAd.src !== src || !P.inAd) return;
-    vAd._frames++; vAd._lastFrameAt = Date.now();
-    vAd.requestVideoFrameCallback(onFrame);
-  };
+  const src = vAd.src, onFrame = () => { if (vAd.src !== src || !P.inAd) return; vAd._frames++; vAd.requestVideoFrameCallback(onFrame); };
   vAd.requestVideoFrameCallback(onFrame);
+  let tries = 0;
   const check = () => {
     if (!P.inAd || vAd.src !== src) return;
-    const advancing = !vAd.paused && !vAd.ended;
-    const frameStalled = advancing && vAd.currentTime > 1.2 && Date.now() - (vAd._lastFrameAt || 0) > 1800;
-    if (frameStalled && vAd._renderFixes < 4) {
-      vAd._renderFixes++;
-      // Rebuild the compositor surface without restarting the ad or resetting its position.
-      const wasPlaying = !vAd.paused, t = vAd.currentTime, muted = vAd.muted;
-      vAd.style.visibility = "hidden"; void vAd.offsetHeight;
-      requestAnimationFrame(() => {
-        if (!P.inAd || vAd.src !== src) return;
-        vAd.style.visibility = "visible"; vAd.muted = muted;
-        try { if (Math.abs(vAd.currentTime - t) > 0.75) vAd.currentTime = t; } catch (e) {}
-        if (wasPlaying) vAd.play().catch(() => { $("adTap").hidden = false; });
-        vAd._lastFrameAt = Date.now();
-      });
+    if (!vAd.paused && vAd.currentTime > 1.2 && !vAd._frames && tries < 3) {
+      tries++; vAd.style.display = "none"; void vAd.offsetWidth; vAd.style.display = "";
     }
-    setTimeout(check, 900);
+    if (!vAd._frames) setTimeout(check, 1200);
   };
   setTimeout(check, 1600);
 }
