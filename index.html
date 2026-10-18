@@ -533,7 +533,9 @@
   /* Ad breaks */
   /* Keep ad video on a plain, untransformed layer. Some browsers can play audio while the transformed video layer stays black. */
   .adbreak { position: absolute; inset: 0; z-index: 3; background: #000; }
-  .adbreak video { position: absolute; inset: 0; display: block; visibility: visible; opacity: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; background: #000; transform: none; -webkit-transform: none; backface-visibility: visible; -webkit-backface-visibility: visible; }
+  .adbreak video { position: absolute; inset: 0; z-index: 1; display: block; visibility: visible; opacity: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; background: transparent; transform: none; -webkit-transform: none; backface-visibility: visible; -webkit-backface-visibility: visible; }
+  .ad-poster-fallback { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+  .adbreak .ad-hud { z-index: 4; }
   .adbreak .ad-tap { left: 50%; top: 50%; transform: translate(-50%, -50%); }
   .ad-mute { pointer-events: auto; display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 6px; background: rgba(0,0,0,.65); color: #fff; }
   .ad-mute svg { width: 20px; height: 20px; }
@@ -954,6 +956,7 @@
     <video id="vB" playsinline preload="auto"></video>
   </div>
   <div class="adbreak" id="adBreak" hidden>
+    <img id="adPosterFallback" class="ad-poster-fallback" alt="" hidden>
     <video id="vAd" playsinline preload="auto" disablepictureinpicture></video>
     <div class="ad-hud"><span><i class="ad-tag">AD</i><span id="adCount">Your show will resume shortly</span></span><span class="ad-up">No ads with <b>GNS+ Gold</b> or <b>Premium</b></span><button type="button" class="ad-mute" id="adMute" aria-label="Mute"></button></div>
     <button type="button" class="ad-tap" id="adTap" hidden>Tap to play</button>
@@ -2554,7 +2557,9 @@ function startAd(after, pick) {
   P.inAd = true; P.adCb = after; player.classList.add("in-ad");
   vids.forEach(v => { if (!v.paused) v.pause(); });
   adBox.hidden = false; $("adTap").hidden = true; $("adCount").textContent = "Your show will resume shortly";
-  if (ad.poster) vAd.poster = ad.poster; else vAd.removeAttribute("poster");
+  const adPosterFallback = $("adPosterFallback");
+  if (ad.poster) { vAd.poster = ad.poster; adPosterFallback.src = ad.poster; adPosterFallback.hidden = false; }
+  else { vAd.removeAttribute("poster"); adPosterFallback.removeAttribute("src"); adPosterFallback.hidden = true; }
   vAd.muted = P.muted; setMuteUI(); vAd._t = 0; vAd._frames = 0;
   vAd.src = ad.src; vAd.load();
   void adBox.offsetWidth;                                   // lay the ad out before it plays, so phones draw its picture (not just its sound)
@@ -2565,7 +2570,7 @@ function startAd(after, pick) {
    frames drawn, re-attach the video so its picture shows up. */
 function watchAdFrames() {
   if (!vAd.requestVideoFrameCallback) return;
-  const src = vAd.src, onFrame = () => { if (vAd.src !== src || !P.inAd) return; vAd._frames++; vAd.requestVideoFrameCallback(onFrame); };
+  const src = vAd.src, onFrame = () => { if (vAd.src !== src || !P.inAd) return; vAd._frames++; $("adPosterFallback").hidden = true; vAd.requestVideoFrameCallback(onFrame); };
   vAd.requestVideoFrameCallback(onFrame);
   let tries = 0;
   const check = () => {
