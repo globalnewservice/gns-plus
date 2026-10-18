@@ -2,7 +2,7 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <title>GNS+</title>
 <meta name="description" content="GNS+, the Global News Service streaming service. Sign in to watch.">
-<meta name="gns-plus-build" content="2026-10-18-ad-debug-visible-1">
+<meta name="gns-plus-build" content="2026-10-14-episodes-3">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
@@ -531,12 +531,8 @@
   .trial-bar p { margin: 0; min-width: 0; flex: 1 1 280px; }
   @media (max-width: 860px) { .plans, .how { grid-template-columns: minmax(0, 1fr); } .plans { gap: 22px; } }
   /* Ad breaks */
-  /* Keep ad video on a plain, untransformed layer. Some browsers can play audio while the transformed video layer stays black. */
-  .adbreak { position: absolute; inset: 0; z-index: 3; background: #000; }
-  .adbreak video { position: absolute; inset: 0; z-index: 1; display: block; visibility: visible; opacity: 1; width: 100%; height: 100%; object-fit: contain; object-position: center; background: transparent; transform: none; -webkit-transform: none; backface-visibility: visible; -webkit-backface-visibility: visible; }
-  .ad-poster-fallback { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
-  .ad-debug { position: fixed !important; z-index: 2147483647 !important; top: 8px !important; left: 8px !important; max-width: calc(100vw - 16px); padding: 9px 12px; border: 2px solid #fff; border-radius: 5px; background: #005fcc !important; color: #fff !important; font: bold 12px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; pointer-events: none; box-shadow: 0 2px 12px #000; }
-  .adbreak .ad-hud { z-index: 4; }
+  .adbreak { position: absolute; inset: 0; z-index: 3; background: #000; transform: translateZ(0); -webkit-transform: translateZ(0); }
+  .adbreak video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
   .adbreak .ad-tap { left: 50%; top: 50%; transform: translate(-50%, -50%); }
   .ad-mute { pointer-events: auto; display: inline-grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 6px; background: rgba(0,0,0,.65); color: #fff; }
   .ad-mute svg { width: 20px; height: 20px; }
@@ -957,9 +953,8 @@
     <video id="vB" playsinline preload="auto"></video>
   </div>
   <div class="adbreak" id="adBreak" hidden>
-    <img id="adPosterFallback" class="ad-poster-fallback" alt="" hidden>
     <video id="vAd" playsinline preload="auto" disablepictureinpicture></video>
-    <div class="ad-debug" id="adDebug" aria-live="polite">Ad diagnostics loading…</div><div class="ad-hud"><span><i class="ad-tag">AD</i><span id="adCount">Your show will resume shortly</span></span><span class="ad-up">No ads with <b>GNS+ Gold</b> or <b>Premium</b></span><button type="button" class="ad-mute" id="adMute" aria-label="Mute"></button></div>
+    <div class="ad-hud"><span><i class="ad-tag">AD</i><span id="adCount">Your show will resume shortly</span></span><span class="ad-up">No ads with <b>GNS+ Gold</b> or <b>Premium</b></span><button type="button" class="ad-mute" id="adMute" aria-label="Mute"></button></div>
     <button type="button" class="ad-tap" id="adTap" hidden>Tap to play</button>
   </div>
   <div class="subs" id="pSubs" hidden></div>
@@ -2550,29 +2545,17 @@ function unlockPlayers() {
 
 /* ---- Ad breaks: unskippable, one ad per break, ads take turns ---- */
 const vAd = $("vAd"), adBox = $("adBreak");
-function updateAdDebug(eventName) {
-  const out = $("adDebug"); if (!out) return;
-  const err = vAd.error ? `ERR${vAd.error.code}` : "no-error";
-  const poster = $("adPosterFallback");
-  const posterState = poster && poster.getAttribute("src") ? (poster.complete && poster.naturalWidth ? `poster${poster.naturalWidth}x${poster.naturalHeight}` : "poster-not-loaded") : "no-poster";
-  out.textContent = `${eventName || "playing"} | ${vAd.videoWidth}x${vAd.videoHeight} | ready:${vAd.readyState} network:${vAd.networkState} | t:${Number(vAd.currentTime || 0).toFixed(1)} | frames:${vAd._frames || 0} | ${err} | ${posterState}`;
-}
-["loadstart","loadedmetadata","loadeddata","canplay","playing","timeupdate","waiting","stalled","error","pause"].forEach(name => vAd.addEventListener(name, () => updateAdDebug(name)));
 let adNext = 0; try { adNext = (+localStorage.getItem("gnsp-ad-next-2") || 0) % ADS.list.length; } catch (e) {}
 P.inAd = false; P.adCb = null; P.adMarks = []; P.adDone = new Set();
 function startAd(after, pick) {
   const ad = pick || ADS.list[adNext % ADS.list.length];
   if (!pick) { adNext = (adNext + 1) % ADS.list.length; try { localStorage.setItem("gnsp-ad-next-2", String(adNext)); } catch (e) {} }
   P.inAd = true; P.adCb = after; player.classList.add("in-ad");
-  updateAdDebug("starting");
   vids.forEach(v => { if (!v.paused) v.pause(); });
   adBox.hidden = false; $("adTap").hidden = true; $("adCount").textContent = "Your show will resume shortly";
-  const adPosterFallback = $("adPosterFallback");
-  if (ad.poster) { vAd.poster = ad.poster; adPosterFallback.src = ad.poster; adPosterFallback.hidden = true; }
-  else { vAd.removeAttribute("poster"); adPosterFallback.removeAttribute("src"); adPosterFallback.hidden = true; }
+  if (ad.poster) vAd.poster = ad.poster; else vAd.removeAttribute("poster");
   vAd.muted = P.muted; setMuteUI(); vAd._t = 0; vAd._frames = 0;
   vAd.src = ad.src; vAd.load();
-  updateAdDebug("source-set");
   void adBox.offsetWidth;                                   // lay the ad out before it plays, so phones draw its picture (not just its sound)
   const pr = vAd.play(); if (pr && pr.catch) pr.catch(() => { if (P.inAd) $("adTap").hidden = false; });
   watchAdFrames();
@@ -2580,36 +2563,16 @@ function startAd(after, pick) {
 /* Some phones play an ad's sound without drawing its picture. If the ad has been playing for a moment with no
    frames drawn, re-attach the video so its picture shows up. */
 function watchAdFrames() {
-  const src = vAd.src;
-  const fallback = $("adPosterFallback");
+  if (!vAd.requestVideoFrameCallback) return;
+  const src = vAd.src, onFrame = () => { if (vAd.src !== src || !P.inAd) return; vAd._frames++; vAd.requestVideoFrameCallback(onFrame); };
+  vAd.requestVideoFrameCallback(onFrame);
   let tries = 0;
-  if (vAd.requestVideoFrameCallback) {
-    const onFrame = () => {
-      if (vAd.src !== src || !P.inAd) return;
-      vAd._frames++;
-      fallback.hidden = true;
-      vAd.requestVideoFrameCallback(onFrame);
-    };
-    vAd.requestVideoFrameCallback(onFrame);
-  } else {
-    /* Browsers without frame callbacks should show the actual video once it has decoded data. */
-    const hideFallback = () => { if (vAd.src === src && P.inAd) fallback.hidden = true; };
-    vAd.addEventListener("loadeddata", hideFallback, { once: true });
-  }
-  /* Only show the poster after playback has advanced and the browser reports no presented video frames. */
   const check = () => {
     if (!P.inAd || vAd.src !== src) return;
-    if (!vAd.paused && vAd.currentTime > 1.2 && !vAd._frames) {
-      if (tries < 3) {
-        tries++;
-        vAd.style.display = "none"; void vAd.offsetWidth; vAd.style.display = "block";
-      }
-      if (fallback.getAttribute("src")) {
-        fallback.hidden = false;
-        fallback.style.display = "block";
-      }
+    if (!vAd.paused && vAd.currentTime > 1.2 && !vAd._frames && tries < 3) {
+      tries++; vAd.style.display = "none"; void vAd.offsetWidth; vAd.style.display = "";
     }
-    if (!vAd._frames && vAd.currentTime < (vAd.duration || 999)) setTimeout(check, 900);
+    if (!vAd._frames) setTimeout(check, 1200);
   };
   setTimeout(check, 1600);
 }
